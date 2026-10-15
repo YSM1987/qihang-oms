@@ -1,0 +1,90 @@
+name: Build and Release OMS
+
+# 触发方式：
+# 1) 打 tag（如 v3.0.1）自动构建并发布 Release
+# 2) 在 Actions 页面手动触发（workflow_dispatch）
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  backend:
+    name: Build Backend (Java 17)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Maven build
+        run: mvn -B clean package -DskipTests
+
+      - name: Package artifact
+        run: |
+          mkdir -p out
+          cp api/target/api-*.jar out/qihang-oms.jar
+          cp docs/qihang-oms.sql out/qihang-oms.sql
+          tar -czf qihang-oms-backend.tar.gz -C out .
+          ls -lh qihang-oms-backend.tar.gz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qihang-oms-backend
+          path: qihang-oms-backend.tar.gz
+
+  frontend:
+    name: Build Frontend (Vue2 / Node 16)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '16'
+          cache: npm
+          cache-dependency-path: vue2/package-lock.json
+
+      - name: Install dependencies
+        working-directory: vue2
+        run: npm install --registry=https://registry.npmmirror.com
+
+      - name: Build production bundle
+        working-directory: vue2
+        run: npm run build:prod
+
+      - name: Package artifact
+        run: tar -czf qihang-oms-frontend.tar.gz -C vue2/dist .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qihang-oms-frontend
+          path: qihang-oms-frontend.tar.gz
+
+  release:
+    name: Publish GitHub Release
+    needs: [backend, frontend]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: 'qihang-oms-*'
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            qihang-oms-backend.tar.gz
+            qihang-oms-frontend.tar.gz
+          body: |
+            启航 OMS 自动构建产物：
+            - `qihang-oms-backend.tar.gz`：后端可执行 jar（qihang-oms.jar）+ 数据库初始化脚本
+            - `qihang-oms-frontend.tar.gz`：前端静态文件（dist）
