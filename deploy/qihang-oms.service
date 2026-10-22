@@ -1,0 +1,53 @@
+[Unit]
+Description=Qihang OMS (Spring Boot)
+Documentation=https://github.com/__GITHUB_REPO__
+After=network.target mysql.service redis.service
+Wants=network.target
+StartLimitIntervalSec=180
+StartLimitBurst=10
+
+[Service]
+# JVM 参数外置于环境文件（对齐 3x-ui /etc/default/x-ui 模式），改参数无需动 unit
+EnvironmentFile=-/etc/default/qihang-oms
+Type=simple
+User=qihang
+Group=qihang
+WorkingDirectory=/usr/local/qihang-oms
+# ${JAVA_OPTS} 来自 /etc/default/qihang-oms：
+# -Xms128m -Xmx512m -Xss512k 小堆+小栈、SerialGC（1核机最优吞吐/内存比）、
+# 元空间上限 160M、GC 日志轮转、禁用随机数阻塞
+ExecStart=/usr/bin/java ${JAVA_OPTS} -jar /usr/local/qihang-oms/qihang-oms.jar
+Restart=on-failure
+RestartSec=5s
+
+# ---- 1GB 甲骨文免费机资源约束（cgroup 层兜底，防 Java 挤死 MySQL/系统）----
+MemoryHigh=700M
+MemoryMax=800M
+CPUQuota=90%
+Nice=8
+OOMScoreAdjust=200
+
+# ---- 日志：stdout/stderr 进 journald（qihang-oms log 查看；app 自身每日滚动写 logs/）----
+StandardOutput=journal
+StandardError=journal
+
+# ---- 安全加固（对齐 3x-ui unit 沙箱风格，Java 服务适用子集）----
+NoNewPrivileges=yes
+ProtectSystem=full
+ReadWritePaths=-/usr/local/qihang-oms -/etc/qihang-oms
+ProtectHome=read-only
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectClock=yes
+ProtectHostname=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+UMask=0077
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

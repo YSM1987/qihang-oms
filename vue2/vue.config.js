@@ -130,6 +130,16 @@ module.exports = {
         .end()
 
     config.when(process.env.NODE_ENV !== 'development', config => {
+      // 静态资源体积优化：生产构建移除 console/debugger（不影响业务逻辑）
+      config.optimization.minimizer('terser').tap(args => {
+        const opts = args[0]
+        opts.terserOptions = opts.terserOptions || {}
+        opts.terserOptions.compress = opts.terserOptions.compress || {}
+        opts.terserOptions.compress.drop_console = true
+        opts.terserOptions.compress.drop_debugger = true
+        return args
+      })
+
       config.optimization.splitChunks({
         chunks: 'all',
         cacheGroups: {

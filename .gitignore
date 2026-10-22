@@ -34,5 +34,13 @@ build/
 ### VS Code ###
 .vscode/
 
+### Node / 前端构建产物 ###
+node_modules/
+vue2/dist/
+npm-debug.log*
+
+### 运行日志 ###
+*.log
+
 ### Mac OS ###
 .DS_Store
