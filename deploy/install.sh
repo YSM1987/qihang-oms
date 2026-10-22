@@ -489,7 +489,7 @@ show_welcome() {
     echo "  3. 初始化 MySQL 数据库与 Redis，自动生成随机强密码"
     echo "  4. 从 GitHub Release 下载最新产物并做 sha256 完整性校验"
     echo "  5. 安装 systemd 服务（开机自启 / 崩溃自恢复 / 内存限额）"
-    echo "  6. 配置 Nginx 站点并放行系统防火墙 80/443"
+    echo "  6. 配置 Nginx 站点并放行系统防火墙对外端口（默认 30545）"
     echo ""
     echo "您只需准备两项信息："
     echo "  * GitHub 仓库：格式 用户名/仓库名，且仓库已发布 Release（含产物）"
